@@ -1,0 +1,15 @@
+{
+  "id": "n957pwevgr",
+  "member": "Antigravity",
+  "kind": "pivoted",
+  "detail": "Build failed due to verbatimModuleSyntax TS errors — all type imports need `import type`. Fixing all affected files now before dev server launch.",
+  "files": [
+    "part1/src/context/AppContext.tsx",
+    "part1/src/context/seedData.ts",
+    "part1/src/components/AddFoodModal.tsx",
+    "part1/src/components/FoodCard.tsx",
+    "part1/src/components/GroupCard.tsx",
+    "part1/src/components/Navbar.tsx"
+  ],
+  "createdAt": 1788708585389
+}

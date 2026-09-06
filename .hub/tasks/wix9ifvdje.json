@@ -1,0 +1,33 @@
+{
+  "id": "wix9ifvdje",
+  "title": "Build FoodGroups Frontend App",
+  "scope": [
+    "part1/src/App.tsx",
+    "part1/src/main.tsx",
+    "part1/index.html",
+    "part1/src/types/index.ts",
+    "part1/src/context/AppContext.tsx",
+    "part1/src/context/seedData.ts",
+    "part1/src/styles/global.css",
+    "part1/src/components/Navbar.tsx",
+    "part1/src/components/GroupCard.tsx",
+    "part1/src/components/FoodCard.tsx",
+    "part1/src/components/StarRating.tsx",
+    "part1/src/components/CreateGroupModal.tsx",
+    "part1/src/components/AddFoodModal.tsx",
+    "part1/src/pages/HomePage.tsx",
+    "part1/src/pages/GroupPage.tsx",
+    "part1/src/pages/FoodDetailPage.tsx",
+    "part1/src/pages/ProfilePage.tsx"
+  ],
+  "status": "todo",
+  "owner": null,
+  "declaredInterface": "SPA with routes: / (groups home), /groups/:id (group detail), /groups/:id/food/:foodId (food item detail), /profile (user profile)",
+  "assumptions": "Frontend-only build. No backend. Data persisted via localStorage. Vite + React + TypeScript stack. React Router v6 for routing. Lucide React for icons.",
+  "completion": null,
+  "abandonReason": null,
+  "dependsOn": [],
+  "baseCommit": null,
+  "createdAt": 1788708508138,
+  "updatedAt": 1788708508138
+}

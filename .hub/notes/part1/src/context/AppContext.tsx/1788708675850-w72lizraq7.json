@@ -1,0 +1,12 @@
+{
+  "id": "w72lizraq7",
+  "member": "Antigravity",
+  "filePath": "part1/src/context/AppContext.tsx",
+  "summary": "Central state store: manages groups, food items, reviews, comments, and current user. Persists all state to localStorage on every change.",
+  "reasoning": "Chosen React Context + localStorage over Zustand/Redux to avoid extra dependencies in a frontend-only prototype. All mutations are pure state spreads so the data layer is easy to swap for real API calls later.",
+  "anchor": {
+    "path": "part1/src/context/AppContext.tsx",
+    "commitHash": "23e420768e27f22ff60f5e503bbbae77c73fa5e3"
+  },
+  "createdAt": 1788708675850
+}

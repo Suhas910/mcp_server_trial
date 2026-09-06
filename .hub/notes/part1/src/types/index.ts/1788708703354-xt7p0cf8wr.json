@@ -1,0 +1,12 @@
+{
+  "id": "xt7p0cf8wr",
+  "member": "Antigravity",
+  "filePath": "part1/src/types/index.ts",
+  "summary": "All TypeScript interfaces for the app: Member, Review, Comment, FoodItem, Group, AppState, FoodCategory union type.",
+  "reasoning": "Single source of truth for all data shapes. FoodCategory is a union type (not an enum) to keep it compatible with HTML select values directly.",
+  "anchor": {
+    "path": "part1/src/types/index.ts",
+    "commitHash": "acbaad0afc44e8ad983c172f368942221856818a"
+  },
+  "createdAt": 1788708703354
+}

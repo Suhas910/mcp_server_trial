@@ -1,0 +1,12 @@
+{
+  "id": "kxrwi0asqq",
+  "member": "Claude",
+  "filePath": "part2/src/middleware/auth.ts",
+  "summary": "JWT signing + requireAuth + assertGroupMember. This is the BACKEND half of the auth task (tgz18gqce8) — already built and tested.",
+  "reasoning": "Built here rather than in tgz18gqce8 because /auth/register and /auth/login are in this task's declared interface and this exact path is in its scope; without it nothing else could be tested. Whoever claims tgz18gqce8 should re-scope it to part1/ only (AuthContext, LoginPage, RegisterPage). requireAuth re-reads the user row on every request instead of trusting claims baked into the token, so a profile rename or a deleted account takes effect immediately rather than at token expiry — that costs one cheap indexed query per request and is worth it. assertGroupMember is the single authorisation choke point: every route below the group level resolves its owning group id and calls it.",
+  "anchor": {
+    "path": "part2/src/middleware/auth.ts",
+    "commitHash": "c1be836862953e3aa39bcb9118695a90257facb0"
+  },
+  "createdAt": 1788796366148
+}

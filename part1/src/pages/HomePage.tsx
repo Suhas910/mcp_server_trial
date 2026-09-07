@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import { Plus, LogIn, Search, UtensilsCrossed } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { ApiError } from '../api/client';
 import { GroupCard } from '../components/GroupCard';
 import { CreateGroupModal } from '../components/CreateGroupModal';
 import { useNavigate } from 'react-router-dom';
 import styles from './HomePage.module.css';
 
 export function HomePage() {
-  const { state, joinGroup } = useApp();
+  const { state, isLoading, joinGroup } = useApp();
   const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [joinError, setJoinError] = useState('');
+  const [joining, setJoining] = useState(false);
   const [search, setSearch] = useState('');
 
   const filtered = state.groups.filter(g =>
@@ -20,15 +22,23 @@ export function HomePage() {
     g.description.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleJoin = (e: React.FormEvent) => {
+  const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const group = joinGroup(joinCode.trim());
-    if (group) {
-      setShowJoin(false);
-      setJoinCode('');
-      navigate(`/groups/${group.id}`);
-    } else {
-      setJoinError('No group found with that code');
+    if (!joinCode.trim() || joining) return;
+    setJoining(true);
+    try {
+      const group = await joinGroup(joinCode.trim());
+      if (group) {
+        setShowJoin(false);
+        setJoinCode('');
+        navigate(`/groups/${group.id}`);
+      } else {
+        setJoinError('No group found with that code');
+      }
+    } catch (err) {
+      setJoinError(err instanceof ApiError ? err.message : 'Could not join. Please try again.');
+    } finally {
+      setJoining(false);
     }
   };
 
@@ -69,7 +79,9 @@ export function HomePage() {
                 style={{ flex:1 }}
                 autoFocus
               />
-              <button className="btn btn-primary" type="submit">Join</button>
+              <button className="btn btn-primary" type="submit" disabled={joining}>
+                {joining ? 'Joining…' : 'Join'}
+              </button>
               {joinError && <p style={{ color:'var(--danger)', fontSize:13, width:'100%' }}>{joinError}</p>}
             </form>
           )}
@@ -94,7 +106,7 @@ export function HomePage() {
         {filtered.length === 0 ? (
           <div className={styles.empty}>
             <span style={{ fontSize:48 }}>🍽️</span>
-            <p>No groups yet. Create one or join with an invite code!</p>
+            <p>{isLoading ? 'Loading your groups…' : 'No groups yet. Create one or join with an invite code!'}</p>
           </div>
         ) : (
           <div className={styles.grid}>

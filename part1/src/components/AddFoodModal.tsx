@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { ApiError } from '../api/client';
 import type { FoodCategory } from '../types';
 
 interface Props {
@@ -20,12 +21,21 @@ export function AddFoodModal({ groupId, onClose }: Props) {
   const [category, setCategory] = useState<FoodCategory>('Main Course');
   const [imageUrl, setImageUrl] = useState('');
   const [imgError, setImgError] = useState(false);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    addFoodItem(groupId, { name: name.trim(), description: description.trim(), category, imageUrl: imageUrl.trim() });
-    onClose();
+    if (!name.trim() || submitting) return;
+    setError('');
+    setSubmitting(true);
+    try {
+      await addFoodItem(groupId, { name: name.trim(), description: description.trim(), category, imageUrl: imageUrl.trim() });
+      onClose();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not add this item. Please try again.');
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -97,12 +107,15 @@ export function AddFoodModal({ groupId, onClose }: Props) {
             )}
           </div>
 
+          {error && <p style={{ fontSize:13, color:'var(--danger)' }}>{error}</p>}
+
           <button
             type="submit"
             className="btn btn-primary"
-            style={{ width:'100%', justifyContent:'center', padding:'13px', marginTop:4 }}
+            disabled={submitting}
+            style={{ width:'100%', justifyContent:'center', padding:'13px', marginTop:4, opacity: submitting ? 0.6 : 1 }}
           >
-            Add to Group
+            {submitting ? 'Adding…' : 'Add to Group'}
           </button>
         </form>
       </div>

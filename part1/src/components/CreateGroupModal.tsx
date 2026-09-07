@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { ApiError } from '../api/client';
 import { useNavigate } from 'react-router-dom';
 
 interface Props {
@@ -34,13 +35,22 @@ export function CreateGroupModal({ onClose }: Props) {
   const [description, setDescription] = useState('');
   const [emoji, setEmoji] = useState('🍽️');
   const [color, setColor] = useState(COLORS[0].value);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    const group = createGroup(name.trim(), description.trim(), emoji, color);
-    onClose();
-    navigate(`/groups/${group.id}`);
+    if (!name.trim() || submitting) return;
+    setError('');
+    setSubmitting(true);
+    try {
+      const group = await createGroup(name.trim(), description.trim(), emoji, color);
+      onClose();
+      navigate(`/groups/${group.id}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not create the group. Please try again.');
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -133,8 +143,15 @@ export function CreateGroupModal({ onClose }: Props) {
             {emoji}
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ width:'100%', justifyContent:'center', padding:'13px' }}>
-            Create Group
+          {error && <p style={{ color:'var(--danger)', fontSize:13 }}>{error}</p>}
+
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={submitting}
+            style={{ width:'100%', justifyContent:'center', padding:'13px', opacity: submitting ? 0.6 : 1 }}
+          >
+            {submitting ? 'Creating…' : 'Create Group'}
           </button>
         </form>
       </div>

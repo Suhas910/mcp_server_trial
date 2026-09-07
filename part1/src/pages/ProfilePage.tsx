@@ -1,6 +1,9 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Check } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { ApiError } from '../api/client';
+import { Check, LogOut } from 'lucide-react';
 import styles from './ProfilePage.module.css';
 
 const AVATARS = ['🍕','🍣','🌮','🍜','🍔','🍰','🥗','🍷','🍺','🥘','🫕','🍩','🍦','🧆','🥐'];
@@ -11,17 +14,34 @@ const COLORS = [
 
 export function ProfilePage() {
   const { state, updateCurrentUser } = useApp();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const [name, setName] = useState(state.currentUser.name);
   const [avatar, setAvatar] = useState(state.currentUser.avatar);
   const [color, setColor] = useState(state.currentUser.color);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    updateCurrentUser(name.trim(), avatar, color);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (!name.trim() || saving) return;
+    setError('');
+    setSaving(true);
+    try {
+      await updateCurrentUser(name.trim(), avatar, color);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not save your profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
   };
 
   const totalReviews = state.groups.flatMap(g => g.foodItems.flatMap(f => f.reviews)).filter(r => r.memberId === state.currentUser.id).length;
@@ -122,13 +142,22 @@ export function ProfilePage() {
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className="btn btn-primary"
-                style={{ alignSelf: 'flex-start', minWidth: 140, justifyContent: 'center' }}
-              >
-                {saved ? <><Check size={15} /> Saved!</> : 'Save Profile'}
-              </button>
+              {error && <p style={{ color: 'var(--danger)', fontSize: 13 }}>{error}</p>}
+
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={saving}
+                  style={{ alignSelf: 'flex-start', minWidth: 140, justifyContent: 'center', opacity: saving ? 0.6 : 1 }}
+                >
+                  {saving ? 'Saving…' : saved ? <><Check size={15} /> Saved!</> : 'Save Profile'}
+                </button>
+                <button type="button" className="btn btn-ghost" onClick={handleLogout}>
+                  <LogOut size={15} />
+                  Log Out
+                </button>
+              </div>
             </form>
           </div>
         </div>

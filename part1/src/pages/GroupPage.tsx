@@ -9,7 +9,7 @@ import styles from './GroupPage.module.css';
 
 export function GroupPage() {
   const { groupId } = useParams<{ groupId: string }>();
-  const { state } = useApp();
+  const { state, isLoading } = useApp();
   const navigate = useNavigate();
   const [showAdd, setShowAdd] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -20,10 +20,12 @@ export function GroupPage() {
   if (!group) {
     return (
       <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>
-        <p>Group not found.</p>
-        <Link to="/" className="btn btn-ghost" style={{ marginTop: 16, display: 'inline-flex' }}>
-          Go Home
-        </Link>
+        <p>{isLoading ? 'Loading…' : 'Group not found.'}</p>
+        {!isLoading && (
+          <Link to="/" className="btn btn-ghost" style={{ marginTop: 16, display: 'inline-flex' }}>
+            Go Home
+          </Link>
+        )}
       </div>
     );
   }

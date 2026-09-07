@@ -1,239 +1,164 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import type { AppState, Group, FoodItem, Review, Comment, Member } from '../types';
-import { SEED_DATA } from './seedData';
-
-const STORAGE_KEY = 'foodgroups_state';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import type { AppState, Comment, FoodItem, Group, Review } from '../types';
+import { useAuth } from './AuthContext';
+import * as authApi from '../api/auth';
+import * as foodsApi from '../api/foods';
+import * as groupsApi from '../api/groups';
+import { ApiError } from '../api/client';
 
 interface AppContextType {
   state: AppState;
-  // Group actions
-  createGroup: (name: string, description: string, emoji: string, color: string) => Group;
-  joinGroup: (inviteCode: string) => Group | null;
-  // Food actions
-  addFoodItem: (groupId: string, item: Omit<FoodItem, 'id' | 'createdAt' | 'reviews' | 'comments' | 'addedBy' | 'addedByName'>) => void;
-  // Review actions
-  addReview: (groupId: string, foodId: string, rating: number, text: string) => void;
-  likeReview: (groupId: string, foodId: string, reviewId: string) => void;
-  // Comment actions
-  addComment: (groupId: string, foodId: string, text: string) => void;
-  likeComment: (groupId: string, foodId: string, commentId: string) => void;
-  // User
-  updateCurrentUser: (name: string, avatar: string, color: string) => void;
+  isLoading: boolean;
+  /** Set when the initial group load fails (e.g. the API is unreachable). */
+  error: string | null;
+  refresh: () => Promise<void>;
+  createGroup: (name: string, description: string, emoji: string, color: string) => Promise<Group>;
+  /** Resolves to null when the code doesn't match any group, rather than throwing. */
+  joinGroup: (inviteCode: string) => Promise<Group | null>;
+  addFoodItem: (
+    groupId: string,
+    item: Omit<FoodItem, 'id' | 'createdAt' | 'reviews' | 'comments' | 'addedBy' | 'addedByName'>,
+  ) => Promise<void>;
+  addReview: (groupId: string, foodId: string, rating: number, text: string) => Promise<void>;
+  likeReview: (groupId: string, foodId: string, reviewId: string) => Promise<void>;
+  addComment: (groupId: string, foodId: string, text: string) => Promise<void>;
+  likeComment: (groupId: string, foodId: string, commentId: string) => Promise<void>;
+  updateCurrentUser: (name: string, avatar: string, color: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
 
-function generateId(): string {
-  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+/** Splices an updated food item's review list back in, keyed by the review's stable id. */
+function withReview(foodItem: FoodItem, review: Review): FoodItem {
+  const exists = foodItem.reviews.some(r => r.id === review.id);
+  return {
+    ...foodItem,
+    reviews: exists
+      ? foodItem.reviews.map(r => (r.id === review.id ? review : r))
+      : [review, ...foodItem.reviews],
+  };
 }
 
-function generateInviteCode(): string {
-  return Math.random().toString(36).slice(2, 8).toUpperCase();
+function withComment(foodItem: FoodItem, comment: Comment): FoodItem {
+  const exists = foodItem.comments.some(c => c.id === comment.id);
+  return {
+    ...foodItem,
+    comments: exists
+      ? foodItem.comments.map(c => (c.id === comment.id ? comment : c))
+      : [...foodItem.comments, comment],
+  };
 }
 
-const DEFAULT_USER: Member = {
-  id: 'user-me',
-  name: 'You',
-  avatar: '🍕',
-  color: '#f59e0b',
-};
-
+/**
+ * GET /groups returns every group the caller belongs to, fully nested
+ * (members, food items, reviews, comments) in one call — so a single fetch on
+ * mount populates the whole app, and every mutation below patches this local
+ * cache from the sub-resource the API hands back instead of refetching.
+ */
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AppState>(() => {
+  const { user, setUser } = useAuth();
+
+  if (!user) {
+    // AppProvider only ever mounts behind the RequireAuth guard in App.tsx —
+    // this is a programming-error guard, not a real runtime path. It also lets
+    // TypeScript narrow `user` below instead of every read needing `user!`.
+    throw new Error('AppProvider requires an authenticated user');
+  }
+
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return { currentUser: DEFAULT_USER, groups: SEED_DATA };
-  });
+      setGroups(await groupsApi.listGroups());
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to load your groups.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
+    void refresh();
+    // Re-run if the logged-in user changes (e.g. logout then a different login),
+    // so one account's groups never linger after switching accounts.
+  }, [refresh, user.id]);
 
-  const createGroup = (name: string, description: string, emoji: string, color: string): Group => {
-    const newGroup: Group = {
-      id: generateId(),
-      name,
-      description,
-      emoji,
-      color,
-      inviteCode: generateInviteCode(),
-      createdAt: new Date().toISOString(),
-      members: [state.currentUser],
-      foodItems: [],
-    };
-    setState(s => ({ ...s, groups: [newGroup, ...s.groups] }));
-    return newGroup;
-  };
+  const withGroup = (groupId: string, update: (group: Group) => Group) =>
+    setGroups(gs => gs.map(g => (g.id === groupId ? update(g) : g)));
 
-  const joinGroup = (inviteCode: string): Group | null => {
-    const group = state.groups.find(g => g.inviteCode === inviteCode.toUpperCase());
-    if (!group) return null;
-    const alreadyMember = group.members.some(m => m.id === state.currentUser.id);
-    if (!alreadyMember) {
-      setState(s => ({
-        ...s,
-        groups: s.groups.map(g =>
-          g.id === group.id
-            ? { ...g, members: [...g.members, state.currentUser] }
-            : g
-        ),
-      }));
-    }
+  const withFoodItem = (groupId: string, foodId: string, update: (item: FoodItem) => FoodItem) =>
+    withGroup(groupId, g => ({
+      ...g,
+      foodItems: g.foodItems.map(f => (f.id === foodId ? update(f) : f)),
+    }));
+
+  const createGroup = async (
+    name: string,
+    description: string,
+    emoji: string,
+    color: string,
+  ): Promise<Group> => {
+    const group = await groupsApi.createGroup({ name, description, emoji, color });
+    setGroups(gs => [group, ...gs]);
     return group;
   };
 
-  const addFoodItem = (
-    groupId: string,
-    item: Omit<FoodItem, 'id' | 'createdAt' | 'reviews' | 'comments' | 'addedBy' | 'addedByName'>
-  ) => {
-    const newItem: FoodItem = {
-      ...item,
-      id: generateId(),
-      createdAt: new Date().toISOString(),
-      reviews: [],
-      comments: [],
-      addedBy: state.currentUser.id,
-      addedByName: state.currentUser.name,
-    };
-    setState(s => ({
-      ...s,
-      groups: s.groups.map(g =>
-        g.id === groupId ? { ...g, foodItems: [newItem, ...g.foodItems] } : g
-      ),
-    }));
+  const joinGroup = async (inviteCode: string): Promise<Group | null> => {
+    try {
+      const group = await groupsApi.joinGroup(inviteCode);
+      setGroups(gs => (gs.some(g => g.id === group.id) ? gs.map(g => (g.id === group.id ? group : g)) : [group, ...gs]));
+      return group;
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) return null;
+      throw err;
+    }
   };
 
-  const addReview = (groupId: string, foodId: string, rating: number, text: string) => {
-    const newReview: Review = {
-      id: generateId(),
-      memberId: state.currentUser.id,
-      memberName: state.currentUser.name,
-      memberAvatar: state.currentUser.avatar,
-      memberColor: state.currentUser.color,
-      rating,
-      text,
-      createdAt: new Date().toISOString(),
-      likes: [],
-    };
-    setState(s => ({
-      ...s,
-      groups: s.groups.map(g =>
-        g.id === groupId
-          ? {
-              ...g,
-              foodItems: g.foodItems.map(f =>
-                f.id === foodId
-                  ? {
-                      ...f,
-                      reviews: [
-                        newReview,
-                        ...f.reviews.filter(r => r.memberId !== state.currentUser.id),
-                      ],
-                    }
-                  : f
-              ),
-            }
-          : g
-      ),
-    }));
+  const addFoodItem: AppContextType['addFoodItem'] = async (groupId, item) => {
+    const foodItem = await foodsApi.addFoodItem(groupId, item);
+    withGroup(groupId, g => ({ ...g, foodItems: [foodItem, ...g.foodItems] }));
   };
 
-  const likeReview = (groupId: string, foodId: string, reviewId: string) => {
-    setState(s => ({
-      ...s,
-      groups: s.groups.map(g =>
-        g.id === groupId
-          ? {
-              ...g,
-              foodItems: g.foodItems.map(f =>
-                f.id === foodId
-                  ? {
-                      ...f,
-                      reviews: f.reviews.map(r =>
-                        r.id === reviewId
-                          ? {
-                              ...r,
-                              likes: r.likes.includes(s.currentUser.id)
-                                ? r.likes.filter(id => id !== s.currentUser.id)
-                                : [...r.likes, s.currentUser.id],
-                            }
-                          : r
-                      ),
-                    }
-                  : f
-              ),
-            }
-          : g
-      ),
-    }));
+  const addReview = async (groupId: string, foodId: string, rating: number, text: string) => {
+    const review = await foodsApi.addReview(foodId, rating, text);
+    withFoodItem(groupId, foodId, f => withReview(f, review));
   };
 
-  const addComment = (groupId: string, foodId: string, text: string) => {
-    const newComment: Comment = {
-      id: generateId(),
-      memberId: state.currentUser.id,
-      memberName: state.currentUser.name,
-      memberAvatar: state.currentUser.avatar,
-      memberColor: state.currentUser.color,
-      text,
-      createdAt: new Date().toISOString(),
-      likes: [],
-    };
-    setState(s => ({
-      ...s,
-      groups: s.groups.map(g =>
-        g.id === groupId
-          ? {
-              ...g,
-              foodItems: g.foodItems.map(f =>
-                f.id === foodId ? { ...f, comments: [...f.comments, newComment] } : f
-              ),
-            }
-          : g
-      ),
-    }));
+  const likeReview = async (groupId: string, foodId: string, reviewId: string) => {
+    const review = await foodsApi.likeReview(reviewId);
+    withFoodItem(groupId, foodId, f => withReview(f, review));
   };
 
-  const likeComment = (groupId: string, foodId: string, commentId: string) => {
-    setState(s => ({
-      ...s,
-      groups: s.groups.map(g =>
-        g.id === groupId
-          ? {
-              ...g,
-              foodItems: g.foodItems.map(f =>
-                f.id === foodId
-                  ? {
-                      ...f,
-                      comments: f.comments.map(c =>
-                        c.id === commentId
-                          ? {
-                              ...c,
-                              likes: c.likes.includes(s.currentUser.id)
-                                ? c.likes.filter(id => id !== s.currentUser.id)
-                                : [...c.likes, s.currentUser.id],
-                            }
-                          : c
-                      ),
-                    }
-                  : f
-              ),
-            }
-          : g
-      ),
-    }));
+  const addComment = async (groupId: string, foodId: string, text: string) => {
+    const comment = await foodsApi.addComment(foodId, text);
+    withFoodItem(groupId, foodId, f => withComment(f, comment));
   };
 
-  const updateCurrentUser = (name: string, avatar: string, color: string) => {
-    setState(s => ({ ...s, currentUser: { ...s.currentUser, name, avatar, color } }));
+  const likeComment = async (groupId: string, foodId: string, commentId: string) => {
+    const comment = await foodsApi.likeComment(commentId);
+    withFoodItem(groupId, foodId, f => withComment(f, comment));
   };
+
+  const updateCurrentUser = async (name: string, avatar: string, color: string) => {
+    setUser(await authApi.updateProfile({ name, avatar, color }));
+    // Reviews/comments this user already posted keep their old denormalised
+    // memberName/memberAvatar/memberColor until the next refresh() — the same
+    // "old posts don't retroactively relabel" behaviour a rename has anywhere.
+  };
+
+  const state: AppState = { currentUser: user, groups };
 
   return (
     <AppContext.Provider
       value={{
         state,
+        isLoading,
+        error,
+        refresh,
         createGroup,
         joinGroup,
         addFoodItem,

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Heart, Send, Star } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { ApiError } from '../api/client';
 import { StarDisplay, StarInput } from '../components/StarRating';
 import styles from './FoodDetailPage.module.css';
 
@@ -17,7 +18,7 @@ function timeAgo(iso: string): string {
 
 export function FoodDetailPage() {
   const { groupId, foodId } = useParams<{ groupId: string; foodId: string }>();
-  const { state, addReview, likeReview, addComment, likeComment } = useApp();
+  const { state, isLoading, addReview, likeReview, addComment, likeComment } = useApp();
   const navigate = useNavigate();
 
   const group = state.groups.find(g => g.id === groupId);
@@ -28,12 +29,15 @@ export function FoodDetailPage() {
   const [reviewText, setReviewText] = useState('');
   const [commentText, setCommentText] = useState('');
   const [imgError, setImgError] = useState(false);
+  const [actionError, setActionError] = useState('');
 
   if (!group || !food) {
     return (
       <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>
-        <p>Item not found.</p>
-        <Link to="/" className="btn btn-ghost" style={{ marginTop: 16, display: 'inline-flex' }}>Go Home</Link>
+        <p>{isLoading ? 'Loading…' : 'Item not found.'}</p>
+        {!isLoading && (
+          <Link to="/" className="btn btn-ghost" style={{ marginTop: 16, display: 'inline-flex' }}>Go Home</Link>
+        )}
       </div>
     );
   }
@@ -44,19 +48,37 @@ export function FoodDetailPage() {
 
   const userReview = food.reviews.find(r => r.memberId === state.currentUser.id);
 
-  const handleReviewSubmit = (e: React.FormEvent) => {
+  const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rating) return;
-    addReview(group.id, food.id, rating, reviewText.trim());
-    setRating(0);
-    setReviewText('');
+    setActionError('');
+    try {
+      await addReview(group.id, food.id, rating, reviewText.trim());
+      setRating(0);
+      setReviewText('');
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Could not post your review. Please try again.');
+    }
   };
 
-  const handleCommentSubmit = (e: React.FormEvent) => {
+  const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim()) return;
-    addComment(group.id, food.id, commentText.trim());
-    setCommentText('');
+    setActionError('');
+    try {
+      await addComment(group.id, food.id, commentText.trim());
+      setCommentText('');
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Could not post your comment. Please try again.');
+    }
+  };
+
+  const handleLikeReview = (reviewId: string) => {
+    likeReview(group.id, food.id, reviewId).catch(() => setActionError('Could not update your like. Please try again.'));
+  };
+
+  const handleLikeComment = (commentId: string) => {
+    likeComment(group.id, food.id, commentId).catch(() => setActionError('Could not update your like. Please try again.'));
   };
 
   return (
@@ -132,6 +154,9 @@ export function FoodDetailPage() {
                 <h3 className={styles.writeTitle}>
                   {userReview ? 'Your Review' : 'Write a Review'}
                 </h3>
+                {actionError && (
+                  <p style={{ color:'var(--danger)', fontSize:13, marginBottom:8 }}>{actionError}</p>
+                )}
                 <form onSubmit={handleReviewSubmit} style={{ display:'flex', flexDirection:'column', gap:14 }}>
                   <div>
                     <p style={{ fontSize:13, color:'var(--text-muted)', marginBottom:8 }}>Your rating</p>
@@ -182,7 +207,7 @@ export function FoodDetailPage() {
                     {r.text && <p className={styles.reviewText}>{r.text}</p>}
                     <button
                       className={styles.likeBtn}
-                      onClick={() => likeReview(group.id, food.id, r.id)}
+                      onClick={() => handleLikeReview(r.id)}
                     >
                       <Heart
                         size={13}
@@ -219,7 +244,7 @@ export function FoodDetailPage() {
                     <p className={styles.commentText}>{c.text}</p>
                     <button
                       className={styles.likeBtn}
-                      onClick={() => likeComment(group.id, food.id, c.id)}
+                      onClick={() => handleLikeComment(c.id)}
                     >
                       <Heart
                         size={12}

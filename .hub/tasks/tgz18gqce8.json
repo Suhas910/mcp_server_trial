@@ -8,16 +8,58 @@
     "part1/src/pages/LoginPage.tsx",
     "part1/src/pages/RegisterPage.tsx"
   ],
-  "status": "claimed",
+  "status": "done",
   "owner": "Claude",
   "declaredInterface": "POST /auth/register -> {user, token}, POST /auth/login -> {user, token}. Frontend: AuthContext wrapping AppContext.",
   "assumptions": "Backend must expose an auth endpoint. JWT preferred. Frontend will store token in memory (not localStorage) for security.",
-  "completion": null,
+  "completion": {
+    "whatWasBuilt": "The frontend half of JWT auth: AuthContext (login/register/logout, token held in memory only), LoginPage and RegisterPage matching the existing dark design system, and App.tsx now gates every other route behind a RequireAuth wrapper that redirects to /login and remembers where the user was headed. The backend half (POST /auth/register, POST /auth/login, part2/src/middleware/auth.ts) was already built and tested in kawub3uehs — this task only needed the part1/ side, as flagged when that task closed.",
+    "decisions": [
+      {
+        "decision": "Token lives in a module-level variable in api/client.ts, not localStorage",
+        "why": "This was the task's own stated assumption (XSS can't read memory the way it can read localStorage). It does mean a hard page refresh always logs the user out — there's no persisted session to restore.",
+        "alternativesConsidered": "localStorage (rejected — explicitly ruled out by the task); httpOnly cookie (would be more robust against XSS, but needs the backend to set cookies and handle CSRF — bigger change than this task's declared scope of AuthContext + two pages)"
+      },
+      {
+        "decision": "A single RequireAuth wrapper around AppProvider, not per-page checks",
+        "why": "AppContext.tsx (built in 9khdul5b6e) needs a non-null user to read state.currentUser from — gating once at the router level means every page under it can assume an authenticated user without its own check, matching how the pages already read state.currentUser.x with no null guards.",
+        "alternativesConsidered": "A null-check in every page component — rejected, would have meant editing every page for a concern App.tsx can handle once"
+      },
+      {
+        "decision": "AuthProvider wraps the whole app (including /login and /register), AppProvider only wraps the authenticated area",
+        "why": "AppContext.tsx throws if mounted without a user (see 9khdul5b6e's notes) — it must never render on /login or /register, where by definition there is no user yet."
+      }
+    ],
+    "filesChanged": [
+      {
+        "path": "part1/src/context/AuthContext.tsx",
+        "purpose": "login/register/logout, exposes {user, isAuthenticated, isLoading, setUser}; wires api/client's 401 hook to force a logout if a token expires mid-session"
+      },
+      {
+        "path": "part1/src/pages/LoginPage.tsx",
+        "purpose": "Email/password form; reads location.state.from to return the user to the page that redirected them here"
+      },
+      {
+        "path": "part1/src/pages/RegisterPage.tsx",
+        "purpose": "Name/email/password form; client-side length check on password mirrors the backend's own 8-char minimum so the error shows before a round trip"
+      },
+      {
+        "path": "part1/src/pages/AuthLayout.module.css",
+        "purpose": "Shared centred-card layout for both auth pages, styled to match the app's existing dark/amber design tokens"
+      },
+      {
+        "path": "part1/src/App.tsx",
+        "purpose": "Adds /login and /register routes; RequireAuth wraps the previously-public routes and now also mounts AppProvider + Navbar"
+      }
+    ],
+    "knownLimitations": "No password reset or email verification flow (not in scope). No persisted session — by design, but worth flagging again: a refresh always sends the user to /login even mid-task. No 'remember me'. Rate limiting on /auth/login is still an open item from kawub3uehs.",
+    "nextSteps": "None outstanding for this task. If a persisted-session UX is wanted later, the design doc's Phase 2 would need a refresh-token endpoint and a decision on where the refresh token itself lives (httpOnly cookie is the standard answer)."
+  },
   "abandonReason": null,
   "dependsOn": [
     "kawub3uehs"
   ],
   "baseCommit": "dcbf70795ec49490247ceb0ad8973fd3dfcde043",
   "createdAt": 1788795594806,
-  "updatedAt": 1788796898430
+  "updatedAt": 1788800078057
 }

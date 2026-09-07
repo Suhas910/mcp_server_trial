@@ -1,0 +1,12 @@
+{
+  "id": "grq185lobb",
+  "member": "Claude",
+  "filePath": "part1/src/context/AuthContext.tsx",
+  "summary": "Holds the JWT in a module-level variable (api/client.ts), never localStorage — a hard refresh always logs the user out by design.",
+  "reasoning": "This was the auth task's own stated security assumption, not my call to relax. If a persisted session is ever wanted, it needs a refresh-token endpoint and a decision on where that refresh token lives (httpOnly cookie is the standard answer) — not just switching this back to localStorage, which would defeat the reason it was avoided. Registered with setUnauthorizedHandler in api/client.ts so an expired token mid-session forces logout rather than every request failing silently.",
+  "anchor": {
+    "path": "part1/src/context/AuthContext.tsx",
+    "commitHash": "7bc9b7dc4b38ce2a4059d26d7a9bf2c335c15bf5"
+  },
+  "createdAt": 1788800127368
+}

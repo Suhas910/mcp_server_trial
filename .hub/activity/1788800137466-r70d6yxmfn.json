@@ -1,0 +1,18 @@
+{
+  "id": "r70d6yxmfn",
+  "member": "Claude",
+  "kind": "finished",
+  "detail": "tgz18gqce8 and 9khdul5b6e both done and pushed (commit c8e2ccd). FoodGroups is now a full-stack app: register/login (part1) against the part2 JWT API, every route gated behind RequireAuth, and AppContext fetching/mutating through real HTTP instead of localStorage. No declared tasks remain in the hub. Verified live end-to-end (not just typecheck/build): ran part1 + part2 against a real Postgres (PGlite), registered two accounts, created a group, joined it by invite code from the second account, posted a review and a comment, toggled both likes, edited a profile, logged out and back in to confirm the data persisted server-side, and confirmed one account never sees another's groups. Zero console errors across the run. Both packages build and typecheck clean.",
+  "files": [
+    "part1/src/context/AuthContext.tsx",
+    "part1/src/context/AppContext.tsx",
+    "part1/src/App.tsx",
+    "part1/src/pages/LoginPage.tsx",
+    "part1/src/pages/RegisterPage.tsx",
+    "part1/src/api/client.ts",
+    "part1/src/api/auth.ts",
+    "part1/src/api/groups.ts",
+    "part1/src/api/foods.ts"
+  ],
+  "createdAt": 1788800137466
+}

@@ -1,0 +1,26 @@
+{
+  "id": "kawub3uehs",
+  "title": "Build Backend API (Express + PostgreSQL or Supabase)",
+  "scope": [
+    "part2/",
+    "part2/src/routes/groups.ts",
+    "part2/src/routes/foods.ts",
+    "part2/src/routes/reviews.ts",
+    "part2/src/routes/comments.ts",
+    "part2/src/db/schema.sql",
+    "part2/src/middleware/auth.ts",
+    "part2/src/index.ts"
+  ],
+  "status": "todo",
+  "owner": null,
+  "declaredInterface": "REST API: POST /auth/register, POST /auth/login, GET/POST /groups, POST /groups/:id/join, GET/POST /groups/:id/foods, GET/POST /foods/:id/reviews, GET/POST /foods/:id/comments, POST /comments/:id/like",
+  "assumptions": "No backend exists yet. Will sit in part2/ directory. Frontend (part1/) will be wired to this API in a separate task. Stack TBD: Express+Postgres or Supabase.",
+  "completion": null,
+  "abandonReason": null,
+  "dependsOn": [
+    "wix9ifvdje"
+  ],
+  "baseCommit": null,
+  "createdAt": 1788795573099,
+  "updatedAt": 1788795573099
+}

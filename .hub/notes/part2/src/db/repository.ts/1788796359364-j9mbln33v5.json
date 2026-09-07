@@ -1,0 +1,12 @@
+{
+  "id": "j9mbln33v5",
+  "member": "Claude",
+  "filePath": "part2/src/db/repository.ts",
+  "summary": "Assembles the nested Group shape (members + foodItems + reviews + comments) that part1's AppContext expects, from batched queries.",
+  "reasoning": "Deliberately returns the SAME shape as part1/src/types/index.ts rather than normalised resources, so the frontend wiring task (9khdul5b6e) is a drop-in swap with no component changes. Queries are batched by id array (WHERE x = ANY($1::uuid[])) then grouped in one pass, so adding a group or food item never adds a query — do not refactor this into per-item lookups. Likes come back as string[] of member ids via array_agg(...) FILTER, matching the frontend's Review.likes / Comment.likes.",
+  "anchor": {
+    "path": "part2/src/db/repository.ts",
+    "commitHash": "f0ef6e773db666558fa9e4c28d742f2e4606d252"
+  },
+  "createdAt": 1788796359364
+}

@@ -1,0 +1,12 @@
+{
+  "id": "slc7dwib50",
+  "member": "Claude",
+  "filePath": "part2/src/db/schema.sql",
+  "summary": "Postgres schema. Idempotent — re-runnable via `npm run db:migrate`.",
+  "reasoning": "Two constraints carry product rules, not just hygiene: UNIQUE (food_item_id, user_id) on reviews is what enforces \"one review per member\" (the route relies on it for its ON CONFLICT upsert, so removing it silently allows duplicates), and the category CHECK duplicates the FoodCategory union in part1/src/types/index.ts — adding a category means editing BOTH, or inserts start failing with a constraint error. There is no migration framework: this file is the whole schema and every statement is CREATE ... IF NOT EXISTS, so an ALTER-style change needs a new migration path rather than an edit here once anyone has real data.",
+  "anchor": {
+    "path": "part2/src/db/schema.sql",
+    "commitHash": "92868142e8cbb5fba71f7a372862be5d932d9d6e"
+  },
+  "createdAt": 1788796382681
+}

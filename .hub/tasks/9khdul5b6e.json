@@ -8,8 +8,8 @@
     "part1/src/api/foods.ts",
     "part1/src/api/auth.ts"
   ],
-  "status": "todo",
-  "owner": null,
+  "status": "claimed",
+  "owner": "Claude",
   "declaredInterface": "Replaces AppContext localStorage layer with real API calls. All existing component interfaces stay the same — only the context internals change.",
   "assumptions": "Backend API task (kawub3uehs) must be done first. Frontend AppContext will be refactored to use fetch() instead of localStorage mutations.",
   "completion": null,
@@ -17,7 +17,7 @@
   "dependsOn": [
     "kawub3uehs"
   ],
-  "baseCommit": null,
+  "baseCommit": "871b89d9ff21d14e3dba473644fde378dd5bde93",
   "createdAt": 1788795584249,
-  "updatedAt": 1788795584249
+  "updatedAt": 1788796905961
 }

@@ -8,8 +8,8 @@
     "part1/src/pages/LoginPage.tsx",
     "part1/src/pages/RegisterPage.tsx"
   ],
-  "status": "todo",
-  "owner": null,
+  "status": "claimed",
+  "owner": "Claude",
   "declaredInterface": "POST /auth/register -> {user, token}, POST /auth/login -> {user, token}. Frontend: AuthContext wrapping AppContext.",
   "assumptions": "Backend must expose an auth endpoint. JWT preferred. Frontend will store token in memory (not localStorage) for security.",
   "completion": null,
@@ -17,7 +17,7 @@
   "dependsOn": [
     "kawub3uehs"
   ],
-  "baseCommit": null,
+  "baseCommit": "dcbf70795ec49490247ceb0ad8973fd3dfcde043",
   "createdAt": 1788795594806,
-  "updatedAt": 1788795594806
+  "updatedAt": 1788796898430
 }

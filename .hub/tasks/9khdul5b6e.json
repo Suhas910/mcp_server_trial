@@ -1,0 +1,23 @@
+{
+  "id": "9khdul5b6e",
+  "title": "Wire Frontend to Backend API",
+  "scope": [
+    "part1/src/context/AppContext.tsx",
+    "part1/src/api/client.ts",
+    "part1/src/api/groups.ts",
+    "part1/src/api/foods.ts",
+    "part1/src/api/auth.ts"
+  ],
+  "status": "todo",
+  "owner": null,
+  "declaredInterface": "Replaces AppContext localStorage layer with real API calls. All existing component interfaces stay the same — only the context internals change.",
+  "assumptions": "Backend API task (kawub3uehs) must be done first. Frontend AppContext will be refactored to use fetch() instead of localStorage mutations.",
+  "completion": null,
+  "abandonReason": null,
+  "dependsOn": [
+    "kawub3uehs"
+  ],
+  "baseCommit": null,
+  "createdAt": 1788795584249,
+  "updatedAt": 1788795584249
+}

@@ -8,16 +8,93 @@
     "part1/src/api/foods.ts",
     "part1/src/api/auth.ts"
   ],
-  "status": "claimed",
+  "status": "done",
   "owner": "Claude",
   "declaredInterface": "Replaces AppContext localStorage layer with real API calls. All existing component interfaces stay the same — only the context internals change.",
   "assumptions": "Backend API task (kawub3uehs) must be done first. Frontend AppContext will be refactored to use fetch() instead of localStorage mutations.",
-  "completion": null,
+  "completion": {
+    "whatWasBuilt": "Replaced AppContext's localStorage layer with real calls to the part2 API. GET /groups (already fully nested by design from kawub3uehs) is fetched once on mount; every mutation (createGroup, joinGroup, addFoodItem, addReview, likeReview, addComment, likeComment, updateCurrentUser) calls its endpoint and patches the local groups array from the response instead of refetching, so the UI still feels instant. state.currentUser now comes from AuthContext's logged-in user rather than a locally-invented DEFAULT_USER.",
+    "decisions": [
+      {
+        "decision": "One GET /groups fetch populates the whole app; mutations patch local state from their own response",
+        "why": "The backend was deliberately shaped in kawub3uehs to return the frontend's full nested Group (members, foodItems, reviews, comments) in a single call, precisely so the frontend wouldn't need per-page fetches or a refetch after every mutation. withReview/withComment helpers splice a returned sub-resource back into the right group/food item by stable id.",
+        "alternativesConsidered": "Refetch GET /groups after every mutation — rejected, wastes a full nested payload for a one-row change and would visibly re-render every card on every like"
+      },
+      {
+        "decision": "createGroup and joinGroup return Promise<Group> / Promise<Group | null>, and their two callers were updated to await them",
+        "why": "CreateGroupModal navigates using the new group's id; HomePage's join flow branches on success/failure. Neither can work against a Promise without awaiting it — the task's 'interfaces stay the same' assumption could not survive real async I/O for these two actions specifically. Every other action (addReview, likeComment, etc.) stayed fire-and-forget compatible since callers never consumed their return value.",
+        "alternativesConsidered": "Keep them synchronous by pre-fetching or caching — not possible, both need a server round trip (a fresh invite code; membership joined server-side)"
+      },
+      {
+        "decision": "Touched call sites beyond AppContext.tsx to surface real errors (CreateGroupModal, AddFoodModal, HomePage, FoodDetailPage, ProfilePage) rather than leaving them fire-and-forget",
+        "why": "Once the actions can genuinely fail (network down, 403, validation), a silent failure with no state change is worse than the old localStorage version, which never failed. Each touched component got a small inline error message using the same style already used for HomePage's join-error, not a new pattern.",
+        "alternativesConsidered": "Leave call sites untouched and let promise rejections go unhandled — rejected as poor UX; not a crash, but a user who couldn't tell why their review didn't post"
+      },
+      {
+        "decision": "GroupPage and FoodDetailPage now show 'Loading…' instead of 'not found' while the initial fetch is in flight",
+        "why": "Without this, navigating straight to a group/food URL (or a slow network) would flash the not-found empty state before groups arrived. One-line guard using AppContext's new isLoading flag, using the same layout the not-found state already had.",
+        "alternativesConsidered": "A dedicated spinner component — skipped as overkill for a state that resolves in well under a second against this API"
+      },
+      {
+        "decision": "Added a Log Out button to ProfilePage",
+        "why": "The app now has real accounts and a real session; there was previously no way to end one. ProfilePage was the natural place — same pattern GitHub/most apps use.",
+        "alternativesConsidered": "Put it in Navbar — considered, but ProfilePage keeps Navbar's diff smaller and logout sits next to the account it affects"
+      }
+    ],
+    "filesChanged": [
+      {
+        "path": "part1/src/api/client.ts",
+        "purpose": "fetch wrapper: attaches the in-memory Bearer token, typed ApiError with .status, a pluggable 401 hook (used by AuthContext to force logout on an expired token)"
+      },
+      {
+        "path": "part1/src/api/auth.ts",
+        "purpose": "register/login/me/updateProfile"
+      },
+      {
+        "path": "part1/src/api/groups.ts",
+        "purpose": "listGroups/getGroup/createGroup/joinGroup — joinGroup uppercases and URL-encodes the code client-side (server also normalises, belt and suspenders)"
+      },
+      {
+        "path": "part1/src/api/foods.ts",
+        "purpose": "addFoodItem/addReview/likeReview/addComment/likeComment"
+      },
+      {
+        "path": "part1/src/context/AppContext.tsx",
+        "purpose": "Full rewrite: fetches on mount via useAuth().user, exposes the same state.currentUser/state.groups shape the pages already read, adds isLoading/error/refresh"
+      },
+      {
+        "path": "part1/src/components/CreateGroupModal.tsx",
+        "purpose": "handleSubmit is now async/awaited; submit button disables mid-request; inline error on failure"
+      },
+      {
+        "path": "part1/src/components/AddFoodModal.tsx",
+        "purpose": "Same pattern as CreateGroupModal"
+      },
+      {
+        "path": "part1/src/pages/HomePage.tsx",
+        "purpose": "handleJoin awaits joinGroup and surfaces the real error message; empty-groups message distinguishes loading from genuinely empty"
+      },
+      {
+        "path": "part1/src/pages/GroupPage.tsx",
+        "purpose": "Loading-vs-not-found guard using isLoading"
+      },
+      {
+        "path": "part1/src/pages/FoodDetailPage.tsx",
+        "purpose": "Review/comment submit awaited with inline error; like clicks wrapped so a failed toggle surfaces an error instead of silently doing nothing; loading-vs-not-found guard"
+      },
+      {
+        "path": "part1/src/pages/ProfilePage.tsx",
+        "purpose": "updateCurrentUser awaited, only shows 'Saved!' on real success; added Log Out"
+      }
+    ],
+    "knownLimitations": "GET /groups has no pagination — fine at prototype scale, flagged already in kawub3uehs as something to revisit before real data volumes. A renamed/re-avatared user's past reviews and comments keep their old denormalised memberName/memberAvatar/memberColor until the next full refresh() (same as a rename not retroactively relabeling old posts elsewhere). No optimistic UI — buttons disable and show a brief loading label during the request rather than updating instantly and rolling back on failure; acceptable given how fast the local API responds.",
+    "nextSteps": "Both remaining hub tasks (tgz18gqce8 and this one) are now done — no declared tasks remain in the hub, so there is nothing queued to pick up next. If continuing, the design doc's Phase 2 items not yet built are: image upload, pagination on GET /groups, refresh tokens for a persisted session, and rate limiting on /auth/login."
+  },
   "abandonReason": null,
   "dependsOn": [
     "kawub3uehs"
   ],
   "baseCommit": "871b89d9ff21d14e3dba473644fde378dd5bde93",
   "createdAt": 1788795584249,
-  "updatedAt": 1788796905961
+  "updatedAt": 1788800103068
 }

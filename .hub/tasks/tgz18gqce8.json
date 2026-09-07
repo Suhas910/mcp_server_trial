@@ -1,0 +1,23 @@
+{
+  "id": "tgz18gqce8",
+  "title": "Add Authentication (JWT)",
+  "scope": [
+    "part2/src/middleware/auth.ts",
+    "part2/src/routes/auth.ts",
+    "part1/src/context/AuthContext.tsx",
+    "part1/src/pages/LoginPage.tsx",
+    "part1/src/pages/RegisterPage.tsx"
+  ],
+  "status": "todo",
+  "owner": null,
+  "declaredInterface": "POST /auth/register -> {user, token}, POST /auth/login -> {user, token}. Frontend: AuthContext wrapping AppContext.",
+  "assumptions": "Backend must expose an auth endpoint. JWT preferred. Frontend will store token in memory (not localStorage) for security.",
+  "completion": null,
+  "abandonReason": null,
+  "dependsOn": [
+    "kawub3uehs"
+  ],
+  "baseCommit": null,
+  "createdAt": 1788795594806,
+  "updatedAt": 1788795594806
+}

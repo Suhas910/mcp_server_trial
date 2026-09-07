@@ -11,16 +11,163 @@
     "part2/src/middleware/auth.ts",
     "part2/src/index.ts"
   ],
-  "status": "claimed",
+  "status": "done",
   "owner": "Claude",
   "declaredInterface": "REST API: POST /auth/register, POST /auth/login, GET/POST /groups, POST /groups/:id/join, GET/POST /groups/:id/foods, GET/POST /foods/:id/reviews, GET/POST /foods/:id/comments, POST /comments/:id/like",
   "assumptions": "No backend exists yet. Will sit in part2/ directory. Frontend (part1/) will be wired to this API in a separate task. Stack TBD: Express+Postgres or Supabase.",
-  "completion": null,
+  "completion": {
+    "whatWasBuilt": "A complete REST backend for FoodGroups in part2/ — Express 5 + TypeScript + PostgreSQL. Covers JWT auth, groups (create / read / join by invite code), food items, reviews (one per member, upserted), comments, and like toggles on both. Every response is shaped to match part1/src/types/index.ts exactly, so the frontend wiring task only has to replace localStorage calls with fetch. Verified end-to-end: 41 checks pass against a real Postgres, and `tsc -b` builds clean.",
+    "decisions": [
+      {
+        "decision": "Express 5 + node-postgres over Supabase",
+        "why": "The design doc listed Supabase as 'preferred for speed', but it needs an external project and credentials nobody on the team has yet, and it cannot be built or tested on this machine. Express + pg is fully self-contained, so the API is verifiable today and the hosting decision stays open.",
+        "alternativesConsidered": "Supabase (blocked on account/credentials); Prisma or Drizzle ORM (rejected — hand-written SQL keeps the nested-shape queries explicit and avoids a codegen step)"
+      },
+      {
+        "decision": "API returns the frontend's nested Group shape, not normalised tables",
+        "why": "part1's AppContext holds `{currentUser, groups}` with members, foodItems, reviews and comments nested, and reviews/comments denormalised with memberName/memberAvatar/memberColor. Matching that exactly means task 9khdul5b6e is a drop-in swap with no component or type changes.",
+        "alternativesConsidered": "Flat normalised resources with client-side joining — rejected because it would force a rewrite of every part1 component"
+      },
+      {
+        "decision": "POST /groups/:id/join accepts either a group UUID or an invite code",
+        "why": "The declared interface specified /groups/:id/join, but the actual frontend flow is 'user types an invite code' — they never have the id. Resolving the param as id-then-code satisfies the declared route and the real flow without a second endpoint.",
+        "alternativesConsidered": "A separate POST /groups/join with {inviteCode} in the body — rejected as it diverges from the declared interface"
+      },
+      {
+        "decision": "Group membership is enforced at every level, resolved upward from the resource id",
+        "why": "Reviews and comments are addressed by food id, which has no group in the URL. Each handler looks up the owning group and calls assertGroupMember, so a non-member gets 403 rather than another group's data. Covered by four negative tests in the smoke test.",
+        "alternativesConsidered": "Trusting the group id in the URL — rejected, it is caller-supplied and would leak across groups"
+      },
+      {
+        "decision": "Reviews upsert via ON CONFLICT with a UNIQUE (food_item_id, user_id) constraint",
+        "why": "The requirement is one review per member, re-submitting updates it. Enforcing it in the schema makes duplicates impossible even under concurrent posts. `RETURNING (xmax = 0)` distinguishes insert from update so the route can answer 201 vs 200.",
+        "alternativesConsidered": "SELECT-then-INSERT-or-UPDATE in the app layer — rejected, it races"
+      },
+      {
+        "decision": "Ship an end-to-end smoke test running against PGlite (Postgres in WASM)",
+        "why": "Neither Docker nor Postgres is installed on this machine, so the SQL would otherwise have shipped typechecked but never executed. PGlite over the wire protocol runs the real queries — the ON CONFLICT upsert, `xmax`, aggregate FILTER and uuid casts are all genuinely exercised. Teammates without Postgres can run it too.",
+        "alternativesConsidered": "pg-mem (an emulator — would not have validated the Postgres-specific SQL); mocking the pg client (would have tested nothing that matters); shipping unverified"
+      },
+      {
+        "decision": "Implemented the backend half of auth here rather than leaving it to tgz18gqce8",
+        "why": "POST /auth/register and /auth/login are named in this task's declared interface and part2/src/middleware/auth.ts is in its scope, so the backend half is inside this task by definition. Leaving it out would have made every other endpoint untestable.",
+        "alternativesConsidered": "Stubbing auth and deferring — rejected; nothing else could then be verified"
+      }
+    ],
+    "filesChanged": [
+      {
+        "path": "part2/package.json",
+        "purpose": "Deps and scripts: dev, build, start, typecheck, db:migrate, test:smoke"
+      },
+      {
+        "path": "part2/tsconfig.json",
+        "purpose": "Strict TS, NodeNext ESM, noUncheckedIndexedAccess"
+      },
+      {
+        "path": "part2/README.md",
+        "purpose": "Setup, full endpoint table, error conventions, directory map"
+      },
+      {
+        "path": "part2/.env.example",
+        "purpose": "DATABASE_URL, JWT_SECRET, JWT_EXPIRES_IN, PORT, CORS_ORIGIN, PG_POOL_MAX"
+      },
+      {
+        "path": "part2/.gitignore",
+        "purpose": "node_modules, dist, .env, tsbuildinfo"
+      },
+      {
+        "path": "part2/src/config.ts",
+        "purpose": "Env parsing; throws at startup on a missing DATABASE_URL or JWT_SECRET"
+      },
+      {
+        "path": "part2/src/app.ts",
+        "purpose": "Builds the Express app: CORS, JSON body, router mounting, error handlers"
+      },
+      {
+        "path": "part2/src/index.ts",
+        "purpose": "Server entry with SIGINT/SIGTERM graceful shutdown"
+      },
+      {
+        "path": "part2/src/types.ts",
+        "purpose": "Response types mirroring part1/src/types/index.ts, plus the FoodCategory list and the Express Request.user augmentation"
+      },
+      {
+        "path": "part2/src/db/schema.sql",
+        "purpose": "users, groups, group_members, food_items, reviews, comments, review_likes, comment_likes — with the one-review-per-member UNIQUE, a rating 1-5 CHECK, a category CHECK matching the FoodCategory union, and indexes"
+      },
+      {
+        "path": "part2/src/db/migrate.ts",
+        "purpose": "Applies schema.sql; idempotent"
+      },
+      {
+        "path": "part2/src/db/pool.ts",
+        "purpose": "pg Pool, transaction helper, timestamptz->ISO string parser so createdAt matches the frontend"
+      },
+      {
+        "path": "part2/src/db/repository.ts",
+        "purpose": "Assembles the nested Group shape — batched queries by id array, then grouped in one pass; avoids N+1"
+      },
+      {
+        "path": "part2/src/middleware/auth.ts",
+        "purpose": "signToken, requireAuth (re-reads the user per request so renames/deletions take effect immediately), currentUser, assertGroupMember"
+      },
+      {
+        "path": "part2/src/middleware/errors.ts",
+        "purpose": "Maps ZodError to 400 and HttpError to its status; everything else logs and returns 500"
+      },
+      {
+        "path": "part2/src/routes/auth.ts",
+        "purpose": "POST /auth/register, POST /auth/login (bcrypt, identical message on either failure), GET /auth/me, PATCH /auth/me for the ProfilePage editor"
+      },
+      {
+        "path": "part2/src/routes/groups.ts",
+        "purpose": "GET/POST /groups, GET /groups/:id, POST /groups/:id/join (UUID or invite code); invite-code generation retries on collision inside a transaction"
+      },
+      {
+        "path": "part2/src/routes/foods.ts",
+        "purpose": "GET/POST /groups/:groupId/foods and GET /foods/:id"
+      },
+      {
+        "path": "part2/src/routes/reviews.ts",
+        "purpose": "GET/POST /foods/:foodId/reviews (upsert, 201 vs 200) and POST /reviews/:id/like"
+      },
+      {
+        "path": "part2/src/routes/comments.ts",
+        "purpose": "GET/POST /foods/:foodId/comments and POST /comments/:id/like"
+      },
+      {
+        "path": "part2/src/lib/http-error.ts",
+        "purpose": "HttpError plus badRequest/unauthorized/forbidden/notFound/conflict helpers"
+      },
+      {
+        "path": "part2/src/lib/async-handler.ts",
+        "purpose": "Forwards rejected promises to the error middleware"
+      },
+      {
+        "path": "part2/src/lib/invite-code.ts",
+        "purpose": "Invite-code generator (ambiguous characters excluded) and a UUID test"
+      },
+      {
+        "path": "part2/src/lib/params.ts",
+        "purpose": "Narrows Express 5's string|string[] route params once, and 404s on a non-UUID id instead of letting Postgres error"
+      },
+      {
+        "path": "part2/scripts/smoke-test.ts",
+        "purpose": "41 end-to-end checks over the real app and real SQL via PGlite: auth, membership 403s, upsert semantics, like toggles, and the nested response shape"
+      },
+      {
+        "path": "part2/package-lock.json",
+        "purpose": "Locked dependency tree"
+      }
+    ],
+    "knownLimitations": "Not run against a stock PostgreSQL server — no Postgres or Docker exists on this machine, so verification used PGlite (real Postgres compiled to WASM) over the wire protocol. The SQL is genuine and unmodified, but someone should run `npm run db:migrate && npm run test:smoke` against a normal Postgres before deploying. PGlite serves one connection at a time, which is why the smoke test pins PG_POOL_MAX=1; production uses the default 10.\n\nAlso: no refresh tokens (a single JWT, default 7d); no rate limiting on /auth/login; no image upload (imageUrl strings only, as in part1); no pagination — GET /groups returns every group with all nested food items, reviews and comments in one response, which is fine at prototype scale but will need cursoring later; no leave-group or delete endpoints; the category CHECK in schema.sql and the FoodCategory union in part1/src/types/index.ts must be kept in sync by hand.",
+    "nextSteps": "9khdul5b6e (Wire Frontend to Backend API) is now unblocked and is the natural next task — the response shapes were built to match part1's types, so it should be a swap of AppContext internals plus an api/client.ts holding the base URL and Bearer header.\n\ntgz18gqce8 (Add Authentication JWT) now only needs its FRONTEND half: part1/src/context/AuthContext.tsx, LoginPage.tsx and RegisterPage.tsx. The backend endpoints it declared (POST /auth/register, POST /auth/login) and part2/src/middleware/auth.ts are already built and tested here — whoever claims it should re-scope it to part1/ only.\n\nBeyond that: run the smoke test against a real Postgres, add rate limiting on login, and add pagination before the group payloads get large."
+  },
   "abandonReason": null,
   "dependsOn": [
     "wix9ifvdje"
   ],
   "baseCommit": "5cf67e1292f84990d2d63a497436f0536a572df7",
   "createdAt": 1788795573099,
-  "updatedAt": 1788795632925
+  "updatedAt": 1788796340527
 }

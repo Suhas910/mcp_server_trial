@@ -1,0 +1,12 @@
+{
+  "id": "8a3pm2x6f1",
+  "member": "Claude",
+  "filePath": "part1/src/context/AppContext.tsx",
+  "summary": "Now backed by the part2 API, not localStorage. One GET /groups on mount; every mutation patches local state from its own response.",
+  "reasoning": "Throws if mounted without an authenticated user — it's only ever rendered inside App.tsx's RequireAuth, which guarantees that. Do not add a page-level null-check as a substitute; fix it at the router level if that guarantee ever changes. createGroup/joinGroup return Promises that CreateGroupModal/HomePage await (they need the resolved Group to navigate/branch); the other actions (addReview, likeComment, etc.) are Promise<void> and are called fire-and-forget by pages, with a .catch/try-catch added at each call site to surface errors instead of failing silently.",
+  "anchor": {
+    "path": "part1/src/context/AppContext.tsx",
+    "commitHash": "e8bdf498f25c1f802e7b81602af4fcd1c8517b40"
+  },
+  "createdAt": 1788800120677
+}

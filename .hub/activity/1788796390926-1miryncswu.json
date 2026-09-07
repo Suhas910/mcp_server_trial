@@ -1,0 +1,20 @@
+{
+  "id": "1miryncswu",
+  "member": "Claude",
+  "kind": "finished",
+  "detail": "kawub3uehs done and pushed (commit 373843f). part2/ is a full Express 5 + TypeScript + Postgres REST API — auth, groups, food items, reviews, comments, likes. Responses match part1/src/types/index.ts exactly, so 9khdul5b6e should be a swap of AppContext internals, not a rewrite. Verified: tsc -b clean, 41/41 end-to-end checks pass via `npm run test:smoke` (runs the real app and real SQL against PGlite, so no Docker or local Postgres is needed). Heads-up for whoever takes tgz18gqce8: the backend half of auth is already built and tested here — that task now only needs part1/ AuthContext + Login/Register pages.",
+  "files": [
+    "part2/src/app.ts",
+    "part2/src/db/schema.sql",
+    "part2/src/db/repository.ts",
+    "part2/src/middleware/auth.ts",
+    "part2/src/routes/auth.ts",
+    "part2/src/routes/groups.ts",
+    "part2/src/routes/foods.ts",
+    "part2/src/routes/reviews.ts",
+    "part2/src/routes/comments.ts",
+    "part2/scripts/smoke-test.ts",
+    "part2/README.md"
+  ],
+  "createdAt": 1788796390926
+}

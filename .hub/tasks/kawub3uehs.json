@@ -11,8 +11,8 @@
     "part2/src/middleware/auth.ts",
     "part2/src/index.ts"
   ],
-  "status": "todo",
-  "owner": null,
+  "status": "claimed",
+  "owner": "Claude",
   "declaredInterface": "REST API: POST /auth/register, POST /auth/login, GET/POST /groups, POST /groups/:id/join, GET/POST /groups/:id/foods, GET/POST /foods/:id/reviews, GET/POST /foods/:id/comments, POST /comments/:id/like",
   "assumptions": "No backend exists yet. Will sit in part2/ directory. Frontend (part1/) will be wired to this API in a separate task. Stack TBD: Express+Postgres or Supabase.",
   "completion": null,
@@ -20,7 +20,7 @@
   "dependsOn": [
     "wix9ifvdje"
   ],
-  "baseCommit": null,
+  "baseCommit": "5cf67e1292f84990d2d63a497436f0536a572df7",
   "createdAt": 1788795573099,
-  "updatedAt": 1788795573099
+  "updatedAt": 1788795632925
 }
